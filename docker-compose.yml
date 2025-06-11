@@ -1,10 +1,10 @@
-version: "3"
 networks:
   private_network:
     ipam:
       driver: default
       config:
         - subnet: 10.2.0.0/24
+
 services:
   unbound:
     image: mvance/unbound:latest
@@ -19,6 +19,27 @@ services:
     cap_add:
       - NET_ADMIN
     env_file: .env
+
+  pihole:
+    depends_on:
+      - unbound
+    container_name: pihole
+    image: pihole/pihole:latest
+    restart: unless-stopped
+    hostname: pihole
+    dns:
+      - 127.0.0.1
+      - ${PIHOLE_DNS}
+    volumes:
+      - ./etc-pihole/:/etc/pihole/
+      - ./etc-dnsmasq.d/:/etc/dnsmasq.d/
+    cap_add:
+      - NET_ADMIN
+    networks:
+      private_network:
+        ipv4_address: 10.2.0.100
+    env_file: .env
+
   wireguard:
     depends_on:
       - unbound
@@ -54,23 +75,3 @@ services:
       - ./db:/app/db
       - ./config:/config
     env_file: .env
-
-  pihole:
-    depends_on:
-      - unbound
-    container_name: pihole
-    image: pihole/pihole:latest
-    restart: unless-stopped
-    hostname: pihole
-    dns:
-      - 127.0.0.1
-      - ${PIHOLE_DNS}
-    volumes:
-      - ./etc-pihole/:/etc/pihole/
-      - ./etc-dnsmasq.d/:/etc/dnsmasq.d/
-    cap_add:
-      - NET_ADMIN
-    networks:
-      private_network:
-        ipv4_address: 10.2.0.100
-    env_file: ./.env
